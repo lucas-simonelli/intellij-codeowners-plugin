@@ -17,6 +17,7 @@ import com.intellij.refactoring.listeners.RefactoringEventData
 import com.intellij.refactoring.listeners.RefactoringEventListener
 import com.intellij.util.Consumer
 import java.awt.event.MouseEvent
+import java.nio.file.Path
 
 class CodeOwnersWidget(project: Project) :
     EditorBasedWidget(project),
@@ -26,7 +27,7 @@ class CodeOwnersWidget(project: Project) :
     private var currentOrSelectedFile: VirtualFile? = null
     private var currentFilePath: String? = null
     private var currentFileRule: CodeOwnerRule? = null
-    private val codeOwnersService: CodeOwners = CodeOwners(project)
+    private val codeOwnersService: OwnedByAnnotationStrategy = OwnedByAnnotationStrategy(project)
 
     override fun install(statusBar: StatusBar) {
         super.install(statusBar)
@@ -35,18 +36,11 @@ class CodeOwnersWidget(project: Project) :
 
     override fun ID() = ID
 
-    override fun getTooltipText() = "Click to show in CODEOWNERS file"
+    override fun getTooltipText() = "Click to show owner details"
 
     override fun getSelectedValue(): String {
         if (currentOrSelectedFile === null) return ""
-        val owners = getCurrentCodeOwnerRule()?.owners ?: return "Owner: None"
-        val first = owners.first()
-        val numOthers = owners.size - 1
-        return when {
-            (numOthers == 1) -> "Owners: $first & 1 other"
-            (numOthers > 1) -> "Owners: $first & $numOthers others"
-            else -> "Owner: $first"
-        }
+        return getCurrentCodeOwnerRule()?.getOwner() ?: return "Owner: None"
     }
 
     override fun getClickConsumer(): Consumer<MouseEvent>? = null
@@ -56,17 +50,14 @@ class CodeOwnersWidget(project: Project) :
     /** Return a popup listing all code owners for a file */
     override fun getPopupStep(): ListPopup? {
         val owners = getCurrentCodeOwnerRule()
-        if (owners === null || owners.owners.size <= 1) {
-            // Not sure if there's a better place to handle clicking when there's
-            // only one owner.
-            goToOwner()
+        if (owners === null) {
             return null
         }
 
         return JBPopupFactory.getInstance().createListPopup(
-            object : BaseListPopupStep<String>("All CODEOWNERS", owners.owners) {
+            object : BaseListPopupStep<String>("Code Owners", owners.getPopup()) {
                 override fun onChosen(selectedValue: String?, finalChoice: Boolean): PopupStep<*>? {
-                    goToOwner()
+                    goToOwner(owners)
                     return super.onChosen(selectedValue, finalChoice)
                 }
             }
@@ -74,9 +65,8 @@ class CodeOwnersWidget(project: Project) :
     }
 
     /** Open the CODEOWNERS file, and navigate to the line which defines the owner of the current file */
-    private fun goToOwner() {
-        val codeOwnersFile = codeOwnersService.findCodeOwnersFile(currentOrSelectedFile)
-        val vf = codeOwnersFile?.toPath()?.let { VirtualFileManager.getInstance().findFileByNioPath(it) } ?: return
+    private fun goToOwner(owners : CodeOwnerRule) {
+        val vf = VirtualFileManager.getInstance().findFileByNioPath(Path.of(owners.annotationLocation)) ?: return
         OpenFileDescriptor(project, vf, currentFileRule?.lineNumber ?: 0, 0).navigate(true)
     }
 
@@ -86,7 +76,7 @@ class CodeOwnersWidget(project: Project) :
         val file = currentOrSelectedFile ?: return null
         if (file.path != currentFilePath) {
             currentFilePath = file.path
-            currentFileRule = codeOwnersService.getCodeOwners(file)
+            currentFileRule = codeOwnersService.getCodeOwner(file)
         }
         return currentFileRule
     }

@@ -1,17 +1,23 @@
 package com.brex.plugins.codeowners
 
-/** Represents a single Code Owner rule */
-data class CodeOwnerRule(
-    /** A pattern describing the files to match */
-    val pattern: String,
-    /** The list of owners of the matched files */
-    val owners: List<String>,
-    /** The line number of this rule in its CODEOWNERS file */
-    val lineNumber: Int,
-) {
-    companion object {
-        /** Parse a CodeOwnerRule from a CODEOWNERS line */
-        fun fromCodeOwnerLine(lineNumber: Int, line: List<String>) =
-            CodeOwnerRule(line[0], line.drop(1), lineNumber)
+class CodeOwnerRule(ow: String, res: String, line: Int, location: String) {
+    private val owner: String = sanitize(ow)
+    private val context: String = sanitize(res)
+    val lineNumber: Int = line
+    val annotationLocation : String = location
+
+    fun getPopup(): List<String> {
+       return listOf("Owner: $owner", "Context: $context")
+    }
+
+    fun getOwner() : String {
+        return "Owner: $owner"
+    }
+
+    fun sanitize(javaPath : String) : String {
+        if ("." in javaPath) {
+            return javaPath.split(".").last()
+        }
+        return javaPath
     }
 }
