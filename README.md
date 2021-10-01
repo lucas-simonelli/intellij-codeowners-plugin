@@ -4,10 +4,9 @@
 
 <!-- Plugin description -->
 
-Adds a widget to your IDE's status bar showing which users or teams own the currently
-opened file, as defined by your project's [CODEOWNERS file](https://docs.github.com/en/github/creating-cloning-and-archiving-repositories/creating-a-repository-on-github/about-code-owners). 
-Multiple code owners are supported by displaying a list of owners when you click the widget, and clicking 
-an owner will navigate to the line of the CODEOWNERS file which declares the currently open file's ownership.
+Adds a widget to your IDE's status bar showing team own the currently
+opened file, as defined by the [@OwnedBy](https://glovoapp.atlassian.net/l/c/nVb6dJa2) annotation.
+
 <!-- Plugin description end -->
 
 ### Installing from the IntelliJ Marketplace
